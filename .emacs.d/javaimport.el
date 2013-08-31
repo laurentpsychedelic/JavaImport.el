@@ -105,7 +105,7 @@ offset=-1, 'AnOtherClass' is returned"
 (defun javaimport-scan-defined-classes-in-source (source-code)
   "Scan source code and return a list of the classes defined within it"
   (with-temp-buffer
-    (let ((package "") (class-list ()) (curr-class nil) (last-class nil) (class-offset 0) (curr-point 1) (last-point 1) (interval-text ""))
+    (let ((package "") (class-list ()) (access-modifier) (curr-class nil) (last-class nil) (class-offset 0) (curr-point 1) (last-point 1) (interval-text ""))
       (insert source-code)
       (javaimport-remove-all-comments-in-buffer)
       (javaimport-remove-all-string-litterals-in-buffer)
@@ -114,13 +114,14 @@ offset=-1, 'AnOtherClass' is returned"
       (setq package (javaimport-scan-package-in-source source-code))
       (while (setq curr-point (re-search-forward javaimport-class-regexp nil t))
         (setq curr-class (match-string javaimport-class-regexp-class-name-index))
+        (setq access-modifier (match-string javaimport-class-regexp-class-access-modifier-index))
         (setq interval-text (substring source-code last-point curr-point))
         (setq class-offset (javaimport-compute-brace-differential interval-text))
         (setq curr-class (javaimport-combine-sub-class-with-parent-class last-class curr-class class-offset))
-        (setq class-list (append (cons curr-class '()) class-list))
+        (add-to-list 'class-list (list curr-class access-modifier))
         (setq last-class curr-class)
         (setq last-point curr-point))
-      (setq class-list (mapcar (lambda (ele) (if package (concat package "." ele) ele)) class-list))
+      (setq class-list (mapcar (lambda (ele) (if package (list (concat package "." (car ele)) (car (nreverse ele))) ele)) class-list))
       class-list)))
 
 (provide 'javaimport)
