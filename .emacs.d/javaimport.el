@@ -139,7 +139,7 @@ offset=-1, 'AnOtherClass' is returned"
         (setq interval-text (substring (buffer-string) last-point curr-point))
         (setq class-offset (javaimport-compute-brace-differential interval-text))
         (setq curr-class (javaimport-combine-sub-class-with-parent-class last-class curr-class class-offset))
-        (add-to-list 'class-list (list curr-class access-modifier))
+        (add-to-list 'class-list (list curr-class (if access-modifier access-modifier "package-private")))
         (setq last-class curr-class)
         (setq last-point curr-point))
       (setq class-list (mapcar (lambda (ele) (if package (list (concat package "." (car ele)) (car (nreverse ele))) ele)) class-list))
