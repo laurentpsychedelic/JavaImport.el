@@ -115,7 +115,7 @@ offset=-1, 'AnOtherClass' is returned"
       (while (setq curr-point (re-search-forward javaimport-class-regexp nil t))
         (setq curr-class (match-string javaimport-class-regexp-class-name-index))
         (setq access-modifier (match-string javaimport-class-regexp-class-access-modifier-index))
-        (setq interval-text (substring source-code last-point curr-point))
+        (setq interval-text (substring (buffer-string) last-point curr-point))
         (setq class-offset (javaimport-compute-brace-differential interval-text))
         (setq curr-class (javaimport-combine-sub-class-with-parent-class last-class curr-class class-offset))
         (add-to-list 'class-list (list curr-class access-modifier))
