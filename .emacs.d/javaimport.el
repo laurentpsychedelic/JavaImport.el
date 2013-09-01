@@ -77,7 +77,7 @@ offset=-1, 'AnOtherClass' is returned"
   (beginning-of-buffer)
   (while ; // comments
       (re-search-forward (regexp-quote "//") nil t)
-    (move-beginning-of-line nil)
+    (goto-char (match-beginning 0))
     (kill-line))
   (beginning-of-buffer)
   (while ; /* ... */ comments
