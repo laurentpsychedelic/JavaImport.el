@@ -98,6 +98,27 @@ offset=-1, 'AnOtherClass' is returned"
     (re-search-forward (regexp-quote "\""))
     (kill-region (point) (mark))))
 
+(defun javaimport-get-all-files-with-matching-extension (extension dir)
+  "Get all files with matching extension in specified directory"
+  (split-string (shell-command-to-string (concat "find " dir " -iname \\*." extension))))
+; (javaimport-get-all-files-with-matching-extension "groovy" "/home/laurentdev/dev/SE-View_101.git/")
+
+; (javaimport-get-all-classes-defined-in-dir "/home/laurentdev/dev/SE-View_101.git/")
+(defun javaimport-get-all-classes-defined-in-dir (dir)
+  "Get the list of all files defined in the source files in the current directory"
+  (let ((class-list ()) (file-list ()))
+    (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
+          (list "java" "groovy"))
+    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-source (javaimport-get-file-contents filepath)) class-list)))
+          file-list)
+    class-list))
+
+(defun javaimport-get-file-contents (filepath)
+  "Get file contents as a string"
+  (with-temp-buffer
+    (insert-file-contents filepath)
+    (buffer-string)))
+
 (defun javaimport-test-scan-defined-classes-in-source ()
   "Test..."
   (interactive)
