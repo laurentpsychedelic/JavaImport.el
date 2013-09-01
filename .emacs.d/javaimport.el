@@ -103,7 +103,7 @@ offset=-1, 'AnOtherClass' is returned"
   (split-string (shell-command-to-string (concat "find " dir " -iname \\*." extension))))
 ; (javaimport-get-all-files-with-matching-extension "groovy" "/home/laurentdev/dev/SE-View_101.git/")
 
-; (javaimport-get-all-classes-defined-in-dir "/home/laurentdev/dev/SE-View_101.git/")
+; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir "/home/laurentdev/dev/SE-View_101.git/")))
 (defun javaimport-get-all-classes-defined-in-dir (dir)
   "Get the list of all files defined in the source files in the current directory"
   (let ((class-list ()) (file-list ()))
