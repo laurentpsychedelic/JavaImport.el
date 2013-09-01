@@ -91,7 +91,7 @@ offset=-1, 'AnOtherClass' is returned"
   "Remove all comments in current buffer"
   (interactive)
   (beginning-of-buffer)
-  (while (re-search-forward (regexp-quote "\"") nil t)
+  (while (re-search-forward (regexp-quote "[^\\][\"]") nil t)
     (goto-char (match-beginning 0))
     (push-mark-command nil)
     (forward-char)
