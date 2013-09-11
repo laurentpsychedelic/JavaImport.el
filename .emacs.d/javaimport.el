@@ -113,6 +113,25 @@ offset=-1, 'AnOtherClass' is returned"
           file-list)
     class-list))
 
+(require 'arc-mode)
+;(message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/SE-View_101.git/backend/dist/SE-View_101_backend.jar")))
+(defun javaimport-scan-defined-classes-in-jarfile (jarfile-path)
+  "Scan and return all the classes defined in JAR file"
+  (with-temp-buffer
+    (let ((classes ()) (archive-files ()))
+      (insert (javaimport-get-file-contents jarfile-path))
+      (setq archive-files (funcall 'archive-zip-summarize))
+      (setq archive-files (mapcar (lambda (ele) (elt ele 0)) archive-files)) 
+      (mapc (lambda (ele)
+              (when (and ele 
+                         (not (string-match "\\([$][0-9]+\\)+" ele))
+                         (not (string-match "META-INF" ele)))
+                (setq ele (replace-regexp-in-string "[.]class$" "" ele))
+                (setq ele (replace-regexp-in-string "\\([/]\\|[$]\\)" "." ele))
+                (setq classes (append classes (cons ele '())))))
+            archive-files)
+      classes)))
+
 (defun javaimport-get-file-contents (filepath)
   "Get file contents as a string"
   (with-temp-buffer
