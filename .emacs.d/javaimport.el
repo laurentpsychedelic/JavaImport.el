@@ -29,6 +29,7 @@
 (setq javaimport-class-regexp (concat "\\(\\(public\\)[[:space:]]+\\)?\\(\\(class\\)\\|\\(interface\\)\\)[[:space:]]+\\(" javaimport-valid-object-name "\\)"))
 (setq javaimport-class-regexp-class-name-index 6)
 (setq javaimport-class-regexp-class-access-modifier-index 2)
+(setq javaimport-class-providers (list 'javaimport-get-all-classes-defined-in-dir-sources 'javaimport-get-all-classes-defined-in-dir-jars))
 
 (defun javaimport-compute-brace-differential (text)
   "Compute the differential of right - left curved braces in given text"
@@ -103,9 +104,9 @@ offset=-1, 'AnOtherClass' is returned"
   (split-string (shell-command-to-string (concat "find " dir " -iname \\*." extension))))
 ; (javaimport-get-all-files-with-matching-extension "groovy" "/home/laurentdev/dev/SE-View_101.git/")
 
-; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir "/home/laurentdev/dev/SE-View_101.git/")))
-(defun javaimport-get-all-classes-defined-in-dir (dir)
-  "Get the list of all files defined in the source files in the current directory"
+; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir-sources "/home/laurentdev/dev/SE-View_101.git/")))>
+(defun javaimport-get-all-classes-defined-in-dir-sources (dir)
+  "Get the list of all classes defined in the source files in the given directory"
   (let ((class-list ()) (file-list ()))
     (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
           (list "java" "groovy"))
@@ -114,6 +115,18 @@ offset=-1, 'AnOtherClass' is returned"
     class-list))
 
 (require 'arc-mode)
+
+; (javaimport-get-all-classes-defined-in-dir-jars "/home/laurentdev/dev/SE-View_101.git")
+(defun javaimport-get-all-classes-defined-in-dir-jars (dir)
+  "Get the list of all classes defined in the JAR files in the given directory"
+  (let ((class-list ()) (file-list ()))
+    (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
+          (list "jar"))
+    (setq file-list (remove-duplicates file-list :test (lambda (a b) (string= (file-name-nondirectory a) (file-name-nondirectory b)))))
+    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-jarfile filepath) class-list)))
+          file-list)
+    class-list))
+
 ;(message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/SE-View_101.git/backend/dist/SE-View_101_backend.jar")))
 (defun javaimport-scan-defined-classes-in-jarfile (jarfile-path)
   "Scan and return all the classes defined in JAR file"
@@ -128,7 +141,7 @@ offset=-1, 'AnOtherClass' is returned"
                          (not (string-match "META-INF" ele)))
                 (setq ele (replace-regexp-in-string "[.]class$" "" ele))
                 (setq ele (replace-regexp-in-string "\\([/]\\|[$]\\)" "." ele))
-                (setq classes (append classes (cons ele '())))))
+                (add-to-list 'classes (list ele nil))))
             archive-files)
       classes)))
 
@@ -163,6 +176,14 @@ offset=-1, 'AnOtherClass' is returned"
         (setq last-point curr-point))
       (setq class-list (mapcar (lambda (ele) (if package (list (concat package "." (car ele)) (car (nreverse ele))) ele)) class-list))
       class-list)))
+
+
+; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir "/home/laurentdev/dev/SE-View_101.git/")))
+(defun javaimport-get-all-classes-defined-in-dir (dir)
+  "Get the list of all classes defined in the given directory from various sources (source file, JARs, ...)"
+    (let ((class-list ()))
+      (mapc (lambda (provider) (setq class-list (append (funcall provider dir) class-list))) javaimport-class-providers)
+      class-list))
 
 (provide 'javaimport)
 ;;; javaimport.el ends here
