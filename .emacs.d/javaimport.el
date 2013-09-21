@@ -24,12 +24,15 @@
 
 ;;; Code:
 
-(setq javaimport-valid-object-name "[a-zA-Z_][a-zA-Z_0-9]*")
-(setq javaimport-package-regexp (concat "package[[:space:]]+\\(" javaimport-valid-object-name "\\([.]" javaimport-valid-object-name "\\)*\\)"))
-(setq javaimport-class-regexp (concat "\\(\\(public\\)[[:space:]]+\\)?\\(\\(class\\)\\|\\(interface\\)\\)[[:space:]]+\\(" javaimport-valid-object-name "\\)"))
+(setq javaimport-valid-object-name-regexp "[a-zA-Z_][a-zA-Z_0-9]*")
+(setq javaimport-package-regexp (concat "package[[:space:]]+\\(" javaimport-valid-object-name-regexp "\\([.]" javaimport-valid-object-name-regexp "\\)*\\)"))
+(setq javaimport-class-regexp (concat "\\(\\(public\\)[[:space:]]+\\)?\\(\\(class\\)\\|\\(interface\\)\\)[[:space:]]+\\(" javaimport-valid-object-name-regexp "\\)"))
+(setq javaimport-class-html-path-regexp (concat "a href=\"\\(" javaimport-valid-object-name-regexp "\\([/]"  javaimport-valid-object-name-regexp "\\)*[.]html\\)\""))
 (setq javaimport-class-regexp-class-name-index 6)
 (setq javaimport-class-regexp-class-access-modifier-index 2)
-(setq javaimport-class-providers (list 'javaimport-get-all-classes-defined-in-dir-sources 'javaimport-get-all-classes-defined-in-dir-jars))
+(setq javaimport-class-html-path-regexp-fqn-index 1)
+;; This is the list of functions providing a list a classes by different means
+(setq javaimport-class-providers (list 'javaimport-get-all-classes-defined-in-dir-sources 'javaimport-get-all-classes-defined-in-dir-jars 'javaimport-get-all-classes-defined-in-html-files))
 
 (defun javaimport-compute-brace-differential (text)
   "Compute the differential of right - left curved braces in given text"
@@ -151,10 +154,7 @@ offset=-1, 'AnOtherClass' is returned"
     (insert-file-contents filepath)
     (buffer-string)))
 
-(defun javaimport-test-scan-defined-classes-in-source ()
-  "Test..."
-  (interactive)
-  (message (format "Classes: %s" (javaimport-scan-defined-classes-in-source (buffer-string)))))
+; (message (format "Classes: %s" (javaimport-scan-defined-classes-in-source (buffer-string)))))
 (defun javaimport-scan-defined-classes-in-source (source-code)
   "Scan source code and return a list of the classes defined within it"
   (with-temp-buffer
@@ -177,6 +177,25 @@ offset=-1, 'AnOtherClass' is returned"
       (setq class-list (mapcar (lambda (ele) (if package (list (concat package "." (car ele)) (car (nreverse ele))) ele)) class-list))
       class-list)))
 
+(setq javaimport-class-html-provider-files (list "~/.emacs.d/java-doc/allclasses-noframe.html"))
+; (message (format "Classes in HTML docs: %s" (javaimport-get-all-classes-defined-in-html-files)))
+(defun javaimport-get-all-classes-defined-in-html-files ()
+  "Scan and return the list of all classes defined in the HTML documentation files"
+  (let ((class-list ()))
+    (mapc (lambda (file) (setq class-list (append (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents file)) class-list))) javaimport-class-html-provider-files)
+    class-list))
+          
+; (message (format "Classes in HTML: %s" (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents "~/settings/.emacs.d/java-doc/allclasses-noframe.html"))))
+(defun javaimport-scan-defined-classes-in-html (html-source)
+  "Scan HTML source and return a list of classes linked inside (ex. JDK7 allclasses-noframe.html)"
+  (with-temp-buffer
+    (let ((class-list ()))
+      (setq case-fold-search t)
+      (insert html-source)
+      (beginning-of-buffer)
+      (while (re-search-forward javaimport-class-html-path-regexp nil t)
+        (add-to-list 'class-list (list (replace-regexp-in-string "[.]html$" "" (replace-regexp-in-string "[/]" "." (match-string javaimport-class-html-path-regexp-fqn-index))) nil)))
+      class-list)))
 
 ; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir "/home/laurentdev/dev/SE-View_101.git/")))
 (defun javaimport-get-all-classes-defined-in-dir (dir)
