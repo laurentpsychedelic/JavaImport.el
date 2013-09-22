@@ -1,46 +1,58 @@
 JavaImport.el
 =============
 
-# Welcome to the JavaImport.el package for Emacs.
+**Welcome to the JavaImport.el package for Emacs!**
 
 ## General presentation
 
 This software aims at providing efficient suggestion mechanism to import classes in the import section
 of Java (or Groovy) source file in Emacs. 
 
-For example say you want to use the class "VeryHandySupportClass" from the "i.am.a.very.cool.java.library"
+For example say you want to use the class ```VeryHandySupportClass``` from the ```i.am.a.very.cool.java.library```
 package of a library you want to use. You will probably type directly something like
 
-    VeryHandySupportClass myObject = new VeryHandySupportClass();
-    myObject.doVeryCoolStuff("Wow!");
+```java
+VeryHandySupportClass myObject = new VeryHandySupportClass();
+myObject.doVeryCoolStuff("Wow!");
+```         
 
 But when it comes to the task of compiling, without adding 
 
-    import i.am.a.very.cool.java.library.VeryHandySupportClass;
+```java
+import i.am.a.very.cool.java.library.VeryHandySupportClass;
+```
 
-at the top of your source file you will certainly being told a bunch of insanities from javac, like this:
+at the top of your source file you will certainly being told a bunch of insanities from ```javac```, like this:
 
->    javac MyClass.java
->    MyClass.java:3: error: cannot find symbol
->            VeryHandySupportClass myObject = new VeryHandySupportClass();
->            ^
->      symbol:   class VeryHandySupportClass
->      location: class MyClass
->    MyClass.java:3: error: cannot find symbol
->            VeryHandySupportClass myObject = new VeryHandySupportClass();
->                                             ^
->      symbol:   class VeryHandySupportClass
->      location: class MyClass
->    2 errors
+```shell
+javac MyClass.java
+MyClass.java:3: error: cannot find symbol
+        VeryHandySupportClass myObject = new VeryHandySupportClass();
+        ^
+  symbol:   class VeryHandySupportClass
+  location: class MyClass
+MyClass.java:3: error: cannot find symbol
+        VeryHandySupportClass myObject = new VeryHandySupportClass();
+                                         ^
+  symbol:   class VeryHandySupportClass
+  location: class MyClass
+2 errors
+```
 
-It is very annoying to, 
-1. Check the documentation to figure out that the fully-qualified name for your class is i.am.a.very.cool.java.library.VeryHandySupportClass
+It is very annoying to:
+
+1. Check the documentation to figure out that the fully-qualified name for your class is ```i.am.a.very.cool.java.library.VeryHandySupportClass```
 2. Going to the top of the file
-3. Insert manually "import i.am.a.very.cool.java.library.VeryHandySupportClass;"
+3. Insert manually 
+
+```java
+import i.am.a.very.cool.java.library.VeryHandySupportClass;
+```
+
 4. Come back to the point you were coding
 5. Remember what you were doing at the first place...
 
-JavaImport.el provide a handy suggestion system, based on the name at cursor point. It scans several sources in order to find
+```JavaImport.el``` provides a handy suggestion system, based on the name at cursor point. It scans several sources in order to find
 classes matching the object pointed. The sources are for the moment:
 
 1. All the source files in the current project directory tree (Java and Groovy source files)
