@@ -107,31 +107,31 @@ offset=-1, 'AnOtherClass' is returned"
   (split-string (shell-command-to-string (concat "find " dir " -iname \\*." extension))))
 ; (javaimport-get-all-files-with-matching-extension "groovy" "/home/laurentdev/dev/SE-View_101.git/")
 
-; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir-sources "/home/laurentdev/dev/SE-View_101.git/")))>
-(defun javaimport-get-all-classes-defined-in-dir-sources (dir)
+; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir-sources "/home/laurentdev/dev/SE-View_101.git/" "LineAnalysisChart")))
+(defun javaimport-get-all-classes-defined-in-dir-sources (dir &optional token)
   "Get the list of all classes defined in the source files in the given directory"
   (let ((class-list ()) (file-list ()))
     (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
           (list "java" "groovy"))
-    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-source (javaimport-get-file-contents filepath)) class-list)))
+    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-source (javaimport-get-file-contents filepath) token) class-list)))
           file-list)
     class-list))
 
 (require 'arc-mode)
 
-; (javaimport-get-all-classes-defined-in-dir-jars "/home/laurentdev/dev/SE-View_101.git")
-(defun javaimport-get-all-classes-defined-in-dir-jars (dir)
+; (javaimport-get-all-classes-defined-in-dir-jars "/home/laurentdev/dev/SE-View_101.git" "Copyable")
+(defun javaimport-get-all-classes-defined-in-dir-jars (dir &optional token)
   "Get the list of all classes defined in the JAR files in the given directory"
   (let ((class-list ()) (file-list ()))
     (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
           (list "jar"))
     (setq file-list (remove-duplicates file-list :test (lambda (a b) (string= (file-name-nondirectory a) (file-name-nondirectory b)))))
-    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-jarfile filepath) class-list)))
+    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-jarfile filepath token) class-list)))
           file-list)
     class-list))
 
 ;(message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/SE-View_101.git/backend/dist/SE-View_101_backend.jar")))
-(defun javaimport-scan-defined-classes-in-jarfile (jarfile-path)
+(defun javaimport-scan-defined-classes-in-jarfile (jarfile-path &optional token)
   "Scan and return all the classes defined in JAR file"
   (with-temp-buffer
     (let ((classes ()) (archive-files ()))
@@ -144,7 +144,8 @@ offset=-1, 'AnOtherClass' is returned"
                          (not (string-match "META-INF" ele)))
                 (setq ele (replace-regexp-in-string "[.]class$" "" ele))
                 (setq ele (replace-regexp-in-string "\\([/]\\|[$]\\)" "." ele))
-                (add-to-list 'classes (list ele nil))))
+                (if (or (not token) (javaimport-token-matches-class-fqn ele token))
+                    (add-to-list 'classes (list ele nil)))))
             archive-files)
       classes)))
 
@@ -155,7 +156,7 @@ offset=-1, 'AnOtherClass' is returned"
     (buffer-string)))
 
 ; (message (format "Classes: %s" (javaimport-scan-defined-classes-in-source (buffer-string)))))
-(defun javaimport-scan-defined-classes-in-source (source-code)
+(defun javaimport-scan-defined-classes-in-source (source-code &optional token)
   "Scan source code and return a list of the classes defined within it"
   (with-temp-buffer
     (let ((package "") (class-list ()) (access-modifier) (curr-class nil) (last-class nil) (class-offset 0) (curr-point 1) (last-point 1) (interval-text ""))
@@ -171,39 +172,52 @@ offset=-1, 'AnOtherClass' is returned"
         (setq interval-text (substring (buffer-string) last-point curr-point))
         (setq class-offset (javaimport-compute-brace-differential interval-text))
         (setq curr-class (javaimport-combine-sub-class-with-parent-class last-class curr-class class-offset))
-        (add-to-list 'class-list (list curr-class (if access-modifier access-modifier "package-private")))
+        (if (or (not token) (javaimport-token-matches-class-fqn curr-class token))
+            (add-to-list 'class-list (list curr-class (if access-modifier access-modifier "package-private"))))
         (setq last-class curr-class)
         (setq last-point curr-point))
       (setq class-list (mapcar (lambda (ele) (if package (list (concat package "." (car ele)) (car (nreverse ele))) ele)) class-list))
       class-list)))
 
 (setq javaimport-class-html-provider-files (list "~/.emacs.d/java-doc/allclasses-noframe.html"))
-; (message (format "Classes in HTML docs: %s" (javaimport-get-all-classes-defined-in-html-files)))
-(defun javaimport-get-all-classes-defined-in-html-files ()
+; (message (format "Classes in HTML docs: %s" (javaimport-get-all-classes-defined-in-html-files "ArrayList")))
+(defun javaimport-get-all-classes-defined-in-html-files (&optional token)
   "Scan and return the list of all classes defined in the HTML documentation files"
   (let ((class-list ()))
-    (mapc (lambda (file) (setq class-list (append (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents file)) class-list))) javaimport-class-html-provider-files)
+    (mapc (lambda (file) (setq class-list (append (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents file) token) class-list))) javaimport-class-html-provider-files)
     class-list))
           
 ; (message (format "Classes in HTML: %s" (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents "~/settings/.emacs.d/java-doc/allclasses-noframe.html"))))
-(defun javaimport-scan-defined-classes-in-html (html-source)
+(defun javaimport-scan-defined-classes-in-html (html-source &optional token)
   "Scan HTML source and return a list of classes linked inside (ex. JDK7 allclasses-noframe.html)"
   (with-temp-buffer
-    (let ((class-list ()))
+    (let ((class-list ()) (class ""))
       (setq case-fold-search t)
       (insert html-source)
       (beginning-of-buffer)
       (while (re-search-forward javaimport-class-html-path-regexp nil t)
-        (add-to-list 'class-list (list (replace-regexp-in-string "[.]html$" "" (replace-regexp-in-string "[/]" "." (match-string javaimport-class-html-path-regexp-fqn-index))) nil)))
+        (setq class (replace-regexp-in-string "[.]html$" "" (replace-regexp-in-string "[/]" "." (match-string javaimport-class-html-path-regexp-fqn-index))))
+        (if (or (not token) (javaimport-token-matches-class-fqn class token))
+            (add-to-list 'class-list (list class nil))))
       class-list)))
 
+; (if (javaimport-token-matches-class-fqn "i.am.a.very.cool.java.library.VeryHandySupportClass" "VeryHandySupportClass") (message "Matched!") (message "Nope..."))
+(defun javaimport-token-matches-class-fqn (class-name token)
+  "Return whether the token passed as arguments matches the class name (fully qualified name) passed as argument"
+  (or (string-match (concat "^" token "$") class-name) (string-match (concat "[.]" token "$") class-name)))
+
 ; (message (format "All detected classes: %s" (javaimport-get-all-classes-defined-in-dir "/home/laurentdev/dev/SE-View_101.git/")))
-(defun javaimport-get-all-classes-defined-in-dir (dir)
+(defun javaimport-get-all-classes-defined-in-dir (dir &optional token)
   "Get the list of all classes defined in the given directory from various sources (source file, JARs, ...)"
     (let ((class-list ()))
-      (mapc (lambda (provider) (setq class-list (append (funcall provider dir) class-list))) javaimport-class-providers)
+      (mapc (lambda (provider) (setq class-list (append (funcall provider dir token) class-list))) javaimport-class-providers)
       class-list))
 
 (provide 'javaimport)
 ;;; javaimport.el ends here
+
+
+
+
+
 
