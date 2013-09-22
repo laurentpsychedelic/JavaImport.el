@@ -1,4 +1,4 @@
-JAVAIMPORT.el
+JavaImport.el
 =============
 
 # Welcome to the JavaImport.el package for Emacs.
@@ -40,8 +40,8 @@ It is very annoying to,
 4. Come back to the point you were coding
 5. Remember what you were doing at the first place...
 
-JavaImport.el provide a handy suggestion system, based on the name at cursor point. It scan several source in order to find
-classes matching the object pointed. The source are for the moment:
+JavaImport.el provide a handy suggestion system, based on the name at cursor point. It scans several sources in order to find
+classes matching the object pointed. The sources are for the moment:
 
 1. All the source files in the current project directory tree (Java and Groovy source files)
 JavaImport.el scans the contents of the files based on Java/Groovy grammar to extract out the classes defined inside
