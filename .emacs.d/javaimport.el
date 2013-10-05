@@ -181,8 +181,8 @@ offset=-1, 'AnOtherClass' is returned"
 
 (setq javaimport-class-html-provider-files (list "~/.emacs.d/java-doc/allclasses-noframe.html"))
 ; (message (format "Classes in HTML docs: %s" (javaimport-get-all-classes-defined-in-html-files "ArrayList")))
-(defun javaimport-get-all-classes-defined-in-html-files (&optional token)
-  "Scan and return the list of all classes defined in the HTML documentation files"
+(defun javaimport-get-all-classes-defined-in-html-files (dir &optional token)
+  "Scan and return the list of all classes defined in the HTML documentation files (the dir argument is ignored!"
   (let ((class-list ()))
     (mapc (lambda (file) (setq class-list (append (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents file) token) class-list))) javaimport-class-html-provider-files)
     class-list))
