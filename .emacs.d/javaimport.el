@@ -213,11 +213,38 @@ offset=-1, 'AnOtherClass' is returned"
       (mapc (lambda (provider) (setq class-list (append (funcall provider dir token) class-list))) javaimport-class-providers)
       class-list))
 
+(defun javaimport-get-all-classes-define-in-parent-project (token)
+  "Get the list of all classes defined in current project directory tree from various sources (source file, JARs, ...)"
+  (javaimport-get-all-classes-defined-in-dir (javaimport-get-project-root) token))
+
+(setq javaimport-build-file-default-patterns (list "[Bb]uild[.]xml" ".+[.]pom" ".+[.]gradle" "src"))
+(setq javaimport-file-extension-to-build-file-patterns-association-table
+     (list 
+      (append '("java") javaimport-build-file-default-patterns)
+      (append '("groovy") javaimport-build-file-default-patterns)))
+
+; (javaimport-get-project-root)
+(defun javaimport-get-project-root ()
+  "Get project root"
+  (let ((directory nil)
+        (start-dir (file-name-directory (buffer-file-name)))
+        (extension (file-name-extension (file-name-nondirectory (buffer-file-name))))
+        (patterns ()))
+    (setq patterns (cdr (assoc extension javaimport-file-extension-to-build-file-patterns-association-table)))
+    (if (not patterns)
+        (setq patterns javaimport-build-file-default-patterns))
+    (catch 'break
+      (mapc 
+       (lambda (pattern) 
+         (setq directory (javaimport-locate-parent-directory-with-given-file-pattern start-dir pattern))
+         (if directory (throw 'break directory)))
+       patterns))
+    directory))
+
+(defun javaimport-locate-parent-directory-with-given-file-pattern (start-dir pattern)
+  "Locate a directory in parent tree containing a file with given pattern and return its path, or nil if not found"
+  (locate-dominating-file start-dir (lambda (dir) (directory-files dir nil pattern))))
+
+
 (provide 'javaimport)
 ;;; javaimport.el ends here
-
-
-
-
-
-
