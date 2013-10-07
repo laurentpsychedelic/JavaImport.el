@@ -3,6 +3,8 @@ JavaImport.el
 
 **Welcome to the JavaImport.el package for Emacs!**
 
+***!!THIS SOFTWARE IS IN DEVELOPMENT AND NOT YET FUNCTIONAL!!***
+
 ## General presentation
 
 This software aims at providing efficient suggestion mechanism to import classes in the import section
