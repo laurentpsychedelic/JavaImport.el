@@ -245,6 +245,18 @@ offset=-1, 'AnOtherClass' is returned"
   "Locate a directory in parent tree containing a file with given pattern and return its path, or nil if not found"
   (locate-dominating-file start-dir (lambda (dir) (directory-files dir nil pattern))))
 
+; (javaimport-get-checksum-of-object "~/dev/github/JavaImport.el.git/.emacs.d/javaimport.el" 'path)
+; (javaimport-get-checksum-of-object (buffer-string) 'string)
+(defun javaimport-get-checksum-of-object (object path-or-string)
+  "Return the checksum (md5) of the object passed as argument.
+It must be a string or a path to a file. The string passed as the first argument
+will be processed according to the method specified by the second argument, which
+has to be a symbol: 'path or 'string"
+  (if (eq path-or-string 'path)
+      (secure-hash 'md5 (javaimport-get-file-contents object))
+    (if (eq path-or-string 'string)
+        (secure-hash 'md5 object)
+      (error "Method must be \"'path\" or \"'string\""))))
 
 (provide 'javaimport)
 ;;; javaimport.el ends here
