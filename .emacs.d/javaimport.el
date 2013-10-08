@@ -120,7 +120,7 @@ offset=-1, 'AnOtherClass' is returned"
 (require 'arc-mode)
 
 ; (javaimport-get-all-classes-defined-in-dir-jars "/home/laurentdev/dev/SE-View_101.git" "Copyable")
-(defun javaimport-get-all-classes-defined-in-dir-jars (dir &optional token)
+(defun javaimport-get-all-classes-defined-in-dir-jars- (dir &optional token)
   "Get the list of all classes defined in the JAR files in the given directory"
   (let ((class-list ()) (file-list ()))
     (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
@@ -130,8 +130,33 @@ offset=-1, 'AnOtherClass' is returned"
           file-list)
     class-list))
 
-;(message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/SE-View_101.git/backend/dist/SE-View_101_backend.jar")))
+(setq javaimport-cache-jarfile-checksums (make-hash-table))
+(setq javaimport-cache-jarfile-classes (make-hash-table))
+
+; (message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/ME-View_210.git/lib/AbsoluteLayout.jar")))
 (defun javaimport-scan-defined-classes-in-jarfile (jarfile-path &optional token)
+  "Scan and return all the classes defined in JAR file"
+  (if (not javaimport-cache-jarfile-checksums) ; No caching
+      (progn
+      ; (message "No caching...")
+        (javaimport-scan-defined-classes-in-jarfile-impl jarfile-path token))
+    (progn
+      (if (or (not (gethash jarfile-path javaimport-cache-jarfile-checksums)) ; Not in cache
+              (not (string= (gethash jarfile-path javaimport-cache-jarfile-checksums)
+                            (javaimport-get-checksum-of-object jarfile-path 'path)))) ; In cache but checksum differs
+          (progn  ; cache miss
+          ; (message "Cache miss! recompute...")
+            (puthash jarfile-path (javaimport-get-checksum-of-object jarfile-path 'path) javaimport-cache-jarfile-checksums)
+            (puthash jarfile-path (javaimport-scan-defined-classes-in-jarfile-impl jarfile-path) javaimport-cache-jarfile-classes)))
+      (progn
+      ; (message "Got from cache...")
+        (if token
+            (delq nil
+                  (mapcar (lambda (ele) (and (string= (car ele) token) ele)) (gethash jarfile-path javaimport-cache-jarfile-classes)))
+          (gethash jarfile-path javaimport-cache-jarfile-classes))))))
+
+; (message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile-impl "/home/laurentdev/dev/ME-View_210.git/lib/AbsoluteLayout.jar")))
+(defun javaimport-scan-defined-classes-in-jarfile-impl (jarfile-path &optional token)
   "Scan and return all the classes defined in JAR file"
   (with-temp-buffer
     (let ((classes ()) (archive-files ()))
