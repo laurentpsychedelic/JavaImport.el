@@ -283,5 +283,13 @@ has to be a symbol: 'path or 'string"
         (secure-hash 'md5 object)
       (error "Method must be \"'path\" or \"'string\""))))
 
+(require 'dropdown-list)
+
+; (message (format "Import chosen: %s" (javaimport-show-menu-and-get-selected-element (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/ME-View_210.git/lib/AbsoluteLayout.jar"))))
+; (javaimport-show-menu-and-get-selected-element (list (list "a" "b") (list "c" "d")))
+(defun javaimport-show-menu-and-get-selected-element (list)
+  "Show a menu of items and get the element choosen by the user"
+  (nth (dropdown-list (mapcar (lambda (ele) (mapconcat 'identity ele " : ")) list)) list))
+
 (provide 'javaimport)
 ;;; javaimport.el ends here
