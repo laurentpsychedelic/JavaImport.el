@@ -113,11 +113,34 @@ offset=-1, 'AnOtherClass' is returned"
   (let ((class-list ()) (file-list ()))
     (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
           (list "java" "groovy"))
-    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-source (javaimport-get-file-contents filepath) token) class-list)))
+    (mapc (lambda (filepath) (setq class-list (append (javaimport-scan-defined-classes-in-source filepath token) class-list)))
           file-list)
     class-list))
 
 (require 'arc-mode)
+
+;; Function to cache and get cached classes given a class scanning method and cache object, regarding the file and token provided
+(defun javaimport-get-cached-classes (class-scan-method checksum-cache class-cache filepath &optional token)
+  "Scan for cached classes using the given caches and class scanning method, regarding the file specified by filepath"
+  (if (not checksum-cache) ; No caching
+      (progn
+      ; (message "No caching...")
+        (funcall class-scan-method filepath token))
+    (progn
+      (if (or (not (gethash filepath checksum-cache)) ; Not in cache
+              (not (string= (gethash filepath checksum-cache)
+                            (javaimport-get-checksum-of-object filepath 'path)))) ; In cache but checksum differs
+          (progn  ; cache miss
+          ; (message "Cache miss! recompute...")
+            (puthash filepath (javaimport-get-checksum-of-object filepath 'path) checksum-cache)
+            (message (format "Method: %s" class-scan-method))
+            (puthash filepath (funcall class-scan-method filepath) class-cache)))
+      (progn
+      ; (message "Got from cache...")
+        (if token
+            (delq nil
+                  (mapcar (lambda (ele) (and (string= (car ele) token) ele)) (gethash filepath class-cache)))
+          (gethash filepath class-cache))))))
 
 ; (javaimport-get-all-classes-defined-in-dir-jars "/home/laurentdev/dev/SE-View_101.git" "Copyable")
 (defun javaimport-get-all-classes-defined-in-dir-jars- (dir &optional token)
@@ -133,31 +156,13 @@ offset=-1, 'AnOtherClass' is returned"
 (setq javaimport-cache-jarfile-checksums (make-hash-table))
 (setq javaimport-cache-jarfile-classes (make-hash-table))
 
-; (message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/ME-View_210.git/lib/AbsoluteLayout.jar")))
+; (message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile "test_data/CoolJavaLibrary.jar")))
 (defun javaimport-scan-defined-classes-in-jarfile (jarfile-path &optional token)
-  "Scan and return all the classes defined in JAR file"
-  (if (not javaimport-cache-jarfile-checksums) ; No caching
-      (progn
-      ; (message "No caching...")
-        (javaimport-scan-defined-classes-in-jarfile-impl jarfile-path token))
-    (progn
-      (if (or (not (gethash jarfile-path javaimport-cache-jarfile-checksums)) ; Not in cache
-              (not (string= (gethash jarfile-path javaimport-cache-jarfile-checksums)
-                            (javaimport-get-checksum-of-object jarfile-path 'path)))) ; In cache but checksum differs
-          (progn  ; cache miss
-          ; (message "Cache miss! recompute...")
-            (puthash jarfile-path (javaimport-get-checksum-of-object jarfile-path 'path) javaimport-cache-jarfile-checksums)
-            (puthash jarfile-path (javaimport-scan-defined-classes-in-jarfile-impl jarfile-path) javaimport-cache-jarfile-classes)))
-      (progn
-      ; (message "Got from cache...")
-        (if token
-            (delq nil
-                  (mapcar (lambda (ele) (and (string= (car ele) token) ele)) (gethash jarfile-path javaimport-cache-jarfile-classes)))
-          (gethash jarfile-path javaimport-cache-jarfile-classes))))))
+  "Scan and return all the classes defined in JAR file (cached version)"
+  (javaimport-get-cached-classes 'javaimport-scan-defined-classes-in-jarfile-impl javaimport-cache-jarfile-checksums javaimport-cache-jarfile-classes jarfile-path token))
 
-; (message (format "Classes in JAR: %s" (javaimport-scan-defined-classes-in-jarfile-impl "/home/laurentdev/dev/ME-View_210.git/lib/AbsoluteLayout.jar")))
 (defun javaimport-scan-defined-classes-in-jarfile-impl (jarfile-path &optional token)
-  "Scan and return all the classes defined in JAR file"
+  "Scan and return all the classes defined in JAR file (implementation)"
   (with-temp-buffer
     (let ((classes ()) (archive-files ()))
       (insert (javaimport-get-file-contents jarfile-path))
@@ -180,11 +185,19 @@ offset=-1, 'AnOtherClass' is returned"
     (insert-file-contents filepath)
     (buffer-string)))
 
-; (message (format "Classes: %s" (javaimport-scan-defined-classes-in-source (buffer-string)))))
-(defun javaimport-scan-defined-classes-in-source (source-code &optional token)
-  "Scan source code and return a list of the classes defined within it"
+(setq javaimport-cache-source-checksums (make-hash-table))
+(setq javaimport-cache-source-classes (make-hash-table))
+
+; (message (format "Classes: %s" (javaimport-scan-defined-classes-in-source "test_data/MySourceFile.java")))
+; (message (format "Classes: %s" (javaimport-scan-defined-classes-in-source "test_data/MyGroovySourceFile.groovy")))
+(defun javaimport-scan-defined-classes-in-source (source-path &optional token)
+  "Scan source code and return a list of the classes defined within it (cached version)"
+  (javaimport-get-cached-classes 'javaimport-scan-defined-classes-in-source-impl javaimport-cache-source-checksums javaimport-cache-source-classes source-path token))
+
+(defun javaimport-scan-defined-classes-in-source-impl (source-path &optional token)
+  "Scan source code and return a list of the classes defined within it (implementation)"
   (with-temp-buffer
-    (let ((package "") (class-list ()) (access-modifier) (curr-class nil) (last-class nil) (class-offset 0) (curr-point 1) (last-point 1) (interval-text ""))
+    (let ((source-code (javaimport-get-file-contents source-path)) (package "") (class-list ()) (access-modifier) (curr-class nil) (last-class nil) (class-offset 0) (curr-point 1) (last-point 1) (interval-text ""))
       (insert source-code)
       (javaimport-remove-all-comments-in-buffer)
       (javaimport-remove-all-string-litterals-in-buffer)
@@ -209,14 +222,21 @@ offset=-1, 'AnOtherClass' is returned"
 (defun javaimport-get-all-classes-defined-in-html-files (dir &optional token)
   "Scan and return the list of all classes defined in the HTML documentation files (the dir argument is ignored!"
   (let ((class-list ()))
-    (mapc (lambda (file) (setq class-list (append (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents file) token) class-list))) javaimport-class-html-provider-files)
+    (mapc (lambda (file) (setq class-list (append (javaimport-scan-defined-classes-in-html file token) class-list))) javaimport-class-html-provider-files)
     class-list))
-          
-; (message (format "Classes in HTML: %s" (javaimport-scan-defined-classes-in-html (javaimport-get-file-contents "~/settings/.emacs.d/java-doc/allclasses-noframe.html"))))
-(defun javaimport-scan-defined-classes-in-html (html-source &optional token)
-  "Scan HTML source and return a list of classes linked inside (ex. JDK7 allclasses-noframe.html)"
+     
+(setq javaimport-cache-html-checksums (make-hash-table))
+(setq javaimport-cache-html-classes (make-hash-table))
+     
+; (message (format "Classes in HTML: %s" (javaimport-scan-defined-classes-in-html "test_data/allclasses-noframe.html")))
+(defun javaimport-scan-defined-classes-in-html (html-path &optional token)
+  "Scan HTML source and return a list of classes linked inside (ex. JDK7 allclasses-noframe.html) (cached version)"
+  (javaimport-get-cached-classes 'javaimport-scan-defined-classes-in-html-impl javaimport-cache-html-checksums javaimport-cache-html-classes html-path token))
+
+(defun javaimport-scan-defined-classes-in-html-impl (html-path &optional token)
+  "Scan HTML source and return a list of classes linked inside (ex. JDK7 allclasses-noframe.html) (implementation)"
   (with-temp-buffer
-    (let ((class-list ()) (class ""))
+    (let ((html-source (javaimport-get-file-contents html-path)) (class-list ()) (class ""))
       (setq case-fold-search t)
       (insert html-source)
       (beginning-of-buffer)
@@ -226,7 +246,6 @@ offset=-1, 'AnOtherClass' is returned"
             (add-to-list 'class-list (list class nil))))
       class-list)))
 
-; (if (javaimport-token-matches-class-fqn "i.am.a.very.cool.java.library.VeryHandySupportClass" "VeryHandySupportClass") (message "Matched!") (message "Nope..."))
 (defun javaimport-token-matches-class-fqn (class-name token)
   "Return whether the token passed as arguments matches the class name (fully qualified name) passed as argument"
   (or (string-match (concat "^" token "$") class-name) (string-match (concat "[.]" token "$") class-name)))
@@ -270,7 +289,7 @@ offset=-1, 'AnOtherClass' is returned"
   "Locate a directory in parent tree containing a file with given pattern and return its path, or nil if not found"
   (locate-dominating-file start-dir (lambda (dir) (directory-files dir nil pattern))))
 
-; (javaimport-get-checksum-of-object "~/dev/github/JavaImport.el.git/.emacs.d/javaimport.el" 'path)
+; (javaimport-get-checksum-of-object "javaimport.el" 'path)
 ; (javaimport-get-checksum-of-object (buffer-string) 'string)
 (defun javaimport-get-checksum-of-object (object path-or-string)
   "Return the checksum (md5) of the object passed as argument.
@@ -285,8 +304,7 @@ has to be a symbol: 'path or 'string"
 
 (require 'dropdown-list)
 
-; (message (format "Import chosen: %s" (javaimport-show-menu-and-get-selected-element (javaimport-scan-defined-classes-in-jarfile "/home/laurentdev/dev/ME-View_210.git/lib/AbsoluteLayout.jar"))))
-; (javaimport-show-menu-and-get-selected-element (list (list "a" "b") (list "c" "d")))
+; (message (format "Import chosen: %s" (javaimport-show-menu-and-get-selected-element (javaimport-scan-defined-classes-in-jarfile "test_data/CoolJavaLibrary.jar"))))
 (defun javaimport-show-menu-and-get-selected-element (list)
   "Show a menu of items and get the element choosen by the user"
   (nth (dropdown-list (mapcar (lambda (ele) (mapconcat 'identity ele " : ")) list)) list))
