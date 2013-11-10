@@ -124,22 +124,22 @@ offset=-1, 'AnOtherClass' is returned"
   "Scan for cached classes using the given caches and class scanning method, regarding the file specified by filepath"
   (if (not checksum-cache) ; No caching
       (progn
-      ; (message "No caching...")
+        ; (message "No caching...")
         (funcall class-scan-method filepath token))
     (progn
       (if (or (not (gethash filepath checksum-cache)) ; Not in cache
               (not (string= (gethash filepath checksum-cache)
                             (javaimport-get-checksum-of-object filepath 'path)))) ; In cache but checksum differs
           (progn  ; cache miss
-          ; (message "Cache miss! recompute...")
+            ; (message "Cache miss! recompute...")
             (puthash filepath (javaimport-get-checksum-of-object filepath 'path) checksum-cache)
-            (message (format "Method: %s" class-scan-method))
+            ; (message (format "Method: %s" class-scan-method))
             (puthash filepath (funcall class-scan-method filepath) class-cache)))
       (progn
-      ; (message "Got from cache...")
+        ; (message "Got from cache...")
         (if token
             (delq nil
-                  (mapcar (lambda (ele) (and (string= (car ele) token) ele)) (gethash filepath class-cache)))
+                  (mapcar (lambda (ele) (and (or (string-match (concat "^" token "$") (car ele)) (string-match (concat "[.]" token "$") (car ele))) ele)) (gethash filepath class-cache)))
           (gethash filepath class-cache))))))
 
 ; (javaimport-get-all-classes-defined-in-dir-jars "/home/laurentdev/dev/SE-View_101.git" "Copyable")
@@ -228,7 +228,7 @@ offset=-1, 'AnOtherClass' is returned"
 (setq javaimport-cache-html-checksums (make-hash-table))
 (setq javaimport-cache-html-classes (make-hash-table))
      
-; (message (format "Classes in HTML: %s" (javaimport-scan-defined-classes-in-html "test_data/allclasses-noframe.html")))
+; (message (format "Classes in HTML: %s" (javaimport-scan-defined-classes-in-html "test_data/allclasses-noframe.html" "String")))
 (defun javaimport-scan-defined-classes-in-html (html-path &optional token)
   "Scan HTML source and return a list of classes linked inside (ex. JDK7 allclasses-noframe.html) (cached version)"
   (javaimport-get-cached-classes 'javaimport-scan-defined-classes-in-html-impl javaimport-cache-html-checksums javaimport-cache-html-classes html-path token))
