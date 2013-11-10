@@ -256,7 +256,30 @@ offset=-1, 'AnOtherClass' is returned"
       (mapc (lambda (provider) (setq class-list (append (funcall provider dir token) class-list))) javaimport-class-providers)
       class-list))
 
-(defun javaimport-get-all-classes-define-in-parent-project (token)
+(defun javaimport-insert-import-if-not-present (import)
+  "Insert import in current source file if not already present"
+  (interactive)
+  (let (new-text npt cpt inc endl)
+    (setq endl (if (string= "groovy" (file-name-extension (file-name-nondirectory (buffer-file-name)))) "" ";"))
+    (setq new-text (concat "import " import endl))
+    (when (not (string-match (regexp-quote new-text) (buffer-string))) ; if not already present
+      (setq cpt (point))
+      (setq inc (1+ (length new-text)))
+      (if (not (string-match "import" (buffer-string))); <- not yet any import
+          (progn
+            (setq npt (string-match "\\(package[[:space:]]*[^\r\n]*\\)" (buffer-string)))
+            (goto-char npt)
+            (forward-word)
+            (end-of-line)
+            (insert "\n")
+            (setq inc (1+ inc)))
+        (progn
+          (setq npt (string-match "import" (buffer-string)))
+          (goto-char npt)))
+      (insert (concat "\n" new-text))
+      (goto-char (+ cpt inc)))))
+
+(defun javaimport-get-all-classes-defined-in-parent-project (token)
   "Get the list of all classes defined in current project directory tree from various sources (source file, JARs, ...)"
   (javaimport-get-all-classes-defined-in-dir (javaimport-get-project-root) token))
 
@@ -307,6 +330,12 @@ has to be a symbol: 'path or 'string"
 (defun javaimport-show-menu-and-get-selected-element (list)
   "Show a menu of items and get the element choosen by the user"
   (nth (dropdown-list (mapcar (lambda (ele) (mapconcat 'identity ele " : ")) list)) list))
+
+(defun javaimport-look-for-import-at-point-and-insert ()
+  "Look for a class to import corresponding to the name at the current point, and insert it as a new import if not already present"
+  (interactive)
+  (javaimport-insert-import-if-not-present (car (javaimport-show-menu-and-get-selected-element
+                                            (javaimport-get-all-classes-defined-in-parent-project (thing-at-point 'word))))))
 
 (provide 'javaimport)
 ;;; javaimport.el ends here
