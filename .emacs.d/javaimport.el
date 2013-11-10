@@ -142,8 +142,7 @@ offset=-1, 'AnOtherClass' is returned"
                   (mapcar (lambda (ele) (and (or (string-match (concat "^" token "$") (car ele)) (string-match (concat "[.]" token "$") (car ele))) ele)) (gethash filepath class-cache)))
           (gethash filepath class-cache))))))
 
-; (javaimport-get-all-classes-defined-in-dir-jars "/home/laurentdev/dev/SE-View_101.git" "Copyable")
-(defun javaimport-get-all-classes-defined-in-dir-jars- (dir &optional token)
+(defun javaimport-get-all-classes-defined-in-dir-jars (dir &optional token)
   "Get the list of all classes defined in the JAR files in the given directory"
   (let ((class-list ()) (file-list ()))
     (mapc (lambda (extension) (setq file-list (append (javaimport-get-all-files-with-matching-extension extension dir) file-list)))
